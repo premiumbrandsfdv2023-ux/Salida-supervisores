@@ -1306,9 +1306,6 @@ function renderPreChecks(){
       <div style="${lblStyle}">Planificado</div>
       <input type="number" id="pc-total-planif" min="0" placeholder="0" oninput="pcSaveMatinal()" style="${inputStyle}">
     </div>
-    <div style="display:grid;grid-template-columns:1fr;gap:5px">
-      <div><div style="${lblStyle}">Clientes Activos</div><input type="number" id="pc-total-activos" min="0" placeholder="0" oninput="pcSaveMatinal()" style="${inputStyle}"></div>
-    </div>
   </div>`;
   const activosCard = `<div style="background:var(--bg3);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px">
     <div style="font-size:11px;font-weight:800;color:var(--text1);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px">Clientes Activos (mi negocio)</div>
@@ -2817,7 +2814,7 @@ async function loadFromFirebase(){
         // If precheck view is visible, refresh counter or navigate now that Firebase data is in
         const pcView = document.getElementById('precheck-view');
         if(pcView && pcView.style.display !== 'none'){
-          if(hasDailyChecks()){ goToRelevamiento(); }
+          if(hasDailyChecks() && !window._pcNoAutoNav){ goToRelevamiento(); }
           else { renderPreChecks(); }
         }
       }
