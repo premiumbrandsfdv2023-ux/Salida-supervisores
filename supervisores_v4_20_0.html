@@ -1043,6 +1043,11 @@ function enterApp(){
   if(curRole==='admin') setupRealTimeGerencial();
   // Tick: actualiza el label 'hace Xs' cada 10 segundos
   setInterval(function(){ if(curRole==='admin') _updateSyncStatus(!!_lastSyncTime); }, 10000);
+  if(_dashRefreshInterval) clearInterval(_dashRefreshInterval);
+  _dashRefreshInterval = setInterval(function(){
+    const dashTab = document.getElementById('tab-dashboard');
+    if(dashTab && dashTab.style.display !== 'none') renderDashboard();
+  }, 15000);
   const keys=Object.keys(CLIENTS_DB);
   const total=keys.reduce((s,k)=>s+Object.values(CLIENTS_DB[k]).reduce((ss,arr)=>ss+arr.length,0),0);
   const statusEl=document.getElementById('data-status');
@@ -1301,8 +1306,13 @@ function renderPreChecks(){
       <div style="${lblStyle}">Planificado</div>
       <input type="number" id="pc-total-planif" min="0" placeholder="0" oninput="pcSaveMatinal()" style="${inputStyle}">
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+    <div style="display:grid;grid-template-columns:1fr;gap:5px">
       <div><div style="${lblStyle}">Clientes Activos</div><input type="number" id="pc-total-activos" min="0" placeholder="0" oninput="pcSaveMatinal()" style="${inputStyle}"></div>
+    </div>
+  </div>`;
+  const activosCard = `<div style="background:var(--bg3);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px">
+    <div style="font-size:11px;font-weight:800;color:var(--text1);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px">Clientes Activos (mi negocio)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
       <div><div style="${lblStyle}">Oportunidad</div><input type="number" id="pc-total-op" min="0" placeholder="0" oninput="pcSaveMatinal()" style="${inputStyle}"></div>
       <div><div style="${lblStyle}">Compromiso</div><input type="number" id="pc-total-comp" min="0" placeholder="0" oninput="pcSaveMatinal()" style="${inputStyle}"></div>
     </div>
@@ -1318,7 +1328,7 @@ function renderPreChecks(){
     </div>`;
   }
   if(wrap){
-    wrap.innerHTML = totalCard + PC_INDICATORS.map(ind=>_pcIndCard(ind.id, ind.label)).join('');
+    wrap.innerHTML = totalCard + activosCard + PC_INDICATORS.map(ind=>_pcIndCard(ind.id, ind.label)).join('');
   }
   // restore saved state if any
   const k = _pcKey();
@@ -1473,8 +1483,8 @@ function _pcUpdateProgress(){
       btn.style.color = '#fff';
       btn.style.opacity = '1';
       btn.style.pointerEvents = '';
-      // Auto-avanzar al relevamiento después de 800ms
-      setTimeout(function(){ goToRelevamiento(); }, 800);
+      // Auto-avanzar al relevamiento después de 800ms (solo si no volvimos desde el relevamiento)
+      if(!window._pcNoAutoNav){ setTimeout(function(){ goToRelevamiento(); }, 800); }
     } else {
       btn.textContent = '🔒 Completá los '+3+' pasos para continuar ('+done+' de 3 listos)';
       btn.style.background = 'var(--bg3)';
@@ -1492,9 +1502,11 @@ function goToRelevamiento(){
 }
 
 function backToPrecheck(){
+  window._pcNoAutoNav = true;
   document.getElementById('visit-list-view').style.display = 'none';
   document.getElementById('precheck-view').style.display = '';
   renderPreChecks();
+  setTimeout(function(){ window._pcNoAutoNav = false; }, 2000);
 }
 
 function toggleSubBreakdown(){
@@ -2620,6 +2632,7 @@ let _fbUnsub = null; // onSnapshot unsubscribe
 let _fbPollInterval = null; // polling fallback para admin
 let _lastSyncTime = null; // timestamp última sync exitosa
 let _fbReconnectTimer = null; // timer auto-reconexión
+let _dashRefreshInterval = null; // refresh dashboard precheck en tiempo real
 
 function _fbDocId(op,sup){
   return (op+'_'+sup).toLowerCase().replace(/[^a-z0-9_]/g,'_').slice(0,64);
