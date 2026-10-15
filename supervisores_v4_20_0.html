@@ -1293,36 +1293,48 @@ function renderPreChecks(){
   const wrap = document.getElementById('pc-indicators-wrap');
   const inputStyle = 'width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg1);color:var(--text1);font-size:13px;font-weight:700;text-align:center;box-sizing:border-box';
   const lblStyle = 'font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px;text-align:center';
+  // Tarjeta especial: Planificado Total Supervisor
+  const totalCard = `<div style="background:var(--bg3);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px">
+    <div style="font-size:11px;font-weight:800;color:var(--text1);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px">Planificado Total Supervisor</div>
+    <div style="margin-bottom:8px">
+      <div style="${lblStyle}">Planificado</div>
+      <input type="number" id="pc-total-planif" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}">
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px">
+      <div><div style="${lblStyle}">Clientes Activos</div><input type="number" id="pc-total-activos" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+      <div><div style="${lblStyle}">Oportunidad</div><input type="number" id="pc-total-op" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+      <div><div style="${lblStyle}">Compromiso</div><input type="number" id="pc-total-comp" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+    </div>
+  </div>`;
+  // Tarjeta por indicador: solo Oportunidad y Compromiso
   function _pcIndCard(idPfx, label){
     return `<div style="background:var(--bg3);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px">
       <div style="font-size:11px;font-weight:800;color:var(--text1);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px">${label}</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
-        <div><div style="${lblStyle}">Planificado</div><input type="number" id="pc-${idPfx}-planif" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
-        <div><div style="${lblStyle}">Mi Negocio</div><input type="number" id="pc-${idPfx}-mn" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
         <div><div style="${lblStyle}">Oportunidad</div><input type="number" id="pc-${idPfx}-op" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
         <div><div style="${lblStyle}">Compromiso</div><input type="number" id="pc-${idPfx}-comp" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
       </div>
     </div>`;
   }
   if(wrap){
-    wrap.innerHTML = _pcIndCard('total','Planificado Total Supervisor') +
-      PC_INDICATORS.map(ind=>_pcIndCard(ind.id, ind.label)).join('');
+    wrap.innerHTML = totalCard + PC_INDICATORS.map(ind=>_pcIndCard(ind.id, ind.label)).join('');
   }
   // restore saved state if any
   const k = _pcKey();
   const saved = (ST.dailyChecks||{})[k]||{};
   if(saved.matinalRealizo !== undefined) pcSetMatinal(saved.matinalRealizo, true);
   if(saved.matinalRealizo !== undefined){
-    const allIds = ['total',...PC_INDICATORS.map(i=>i.id)];
-    allIds.forEach(id=>{
-      const fp = document.getElementById('pc-'+id+'-planif');
-      const fm = document.getElementById('pc-'+id+'-mn');
-      const fo = document.getElementById('pc-'+id+'-op');
-      const fc = document.getElementById('pc-'+id+'-comp');
-      if(fp && saved[id+'_planif'] !== undefined) fp.value = saved[id+'_planif'];
-      if(fm && saved[id+'_mn']     !== undefined) fm.value = saved[id+'_mn'];
-      if(fo && saved[id+'_op']     !== undefined) fo.value = saved[id+'_op'];
-      if(fc && saved[id+'_comp']   !== undefined) fc.value = saved[id+'_comp'];
+    // Restore total card
+    ['planif','activos','op','comp'].forEach(f=>{
+      const el = document.getElementById('pc-total-'+f);
+      if(el && saved['total_'+f] !== undefined) el.value = saved['total_'+f];
+    });
+    // Restore per-indicator cards
+    PC_INDICATORS.forEach(ind=>{
+      const fo = document.getElementById('pc-'+ind.id+'-op');
+      const fc = document.getElementById('pc-'+ind.id+'-comp');
+      if(fo && saved[ind.id+'_op']   !== undefined) fo.value = saved[ind.id+'_op'];
+      if(fc && saved[ind.id+'_comp'] !== undefined) fc.value = saved[ind.id+'_comp'];
     });
   }
   if(saved.matinalSaved) _pcMarkDone('matinal');
@@ -1379,12 +1391,14 @@ function pcSaveMatinal(){
   const k = _pcKey();
   if(!ST.dailyChecks[k]) ST.dailyChecks[k]={};
   const d = ST.dailyChecks[k];
-  const allIds = ['total',...PC_INDICATORS.map(i=>i.id)];
-  allIds.forEach(id=>{
-    d[id+'_planif'] = Number(document.getElementById('pc-'+id+'-planif')?.value||0);
-    d[id+'_mn']     = Number(document.getElementById('pc-'+id+'-mn')?.value||0);
-    d[id+'_op']     = Number(document.getElementById('pc-'+id+'-op')?.value||0);
-    d[id+'_comp']   = Number(document.getElementById('pc-'+id+'-comp')?.value||0);
+  // Save total card
+  ['planif','activos','op','comp'].forEach(f=>{
+    d['total_'+f] = Number(document.getElementById('pc-total-'+f)?.value||0);
+  });
+  // Save per-indicator cards
+  PC_INDICATORS.forEach(ind=>{
+    d[ind.id+'_op']   = Number(document.getElementById('pc-'+ind.id+'-op')?.value||0);
+    d[ind.id+'_comp'] = Number(document.getElementById('pc-'+ind.id+'-comp')?.value||0);
   });
   d.matinalSaved = true;
   persistState();
