@@ -480,35 +480,8 @@ textarea.form-input{min-height:80px;resize:vertical}
           <div id="pc-mat-detail" style="display:none">
             <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Planificación del día</div>
 
-            <div style="margin-bottom:10px">
-              <label style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Planificado Total Supervisor</label>
-              <input type="number" id="pc-planificado" min="0" placeholder="0"
-                style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:14px;font-weight:700;box-sizing:border-box"
-                oninput="pcCheckSave()">
-            </div>
-
-            <!-- Tabla de indicadores -->
-            <div style="overflow-x:auto;margin-bottom:12px">
-              <table style="width:100%;border-collapse:collapse;font-size:12px">
-                <thead>
-                  <tr style="background:var(--bg3)">
-                    <th style="padding:7px 10px;text-align:left;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.05em">Indicador</th>
-                    <th style="padding:7px 10px;text-align:center;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase">Oportunidad</th>
-                    <th style="padding:7px 10px;text-align:center;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase">Compromiso</th>
-                  </tr>
-                </thead>
-                <tbody id="pc-mat-tbody">
-                  <!-- filled by renderPreChecks() -->
-                </tbody>
-              </table>
-            </div>
-
-            <div style="margin-bottom:12px">
-              <label style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Mi Negocio — Clientes Activos</label>
-              <input type="number" id="pc-mn-activos" min="0" placeholder="0"
-                style="width:100%;margin-top:4px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:14px;font-weight:700;box-sizing:border-box"
-                oninput="pcCheckSave()">
-            </div>
+            <!-- Cards por indicador: filled by renderPreChecks() -->
+            <div id="pc-indicators-wrap" style="margin-bottom:12px"></div>
 
             <button id="pc-mat-save-btn" onclick="pcSaveMatinal()"
               style="width:100%;padding:11px;border-radius:10px;background:var(--green);color:#fff;font-size:13px;font-weight:700;cursor:pointer;border:none;opacity:.45;pointer-events:none;transition:opacity .2s">
@@ -1316,43 +1289,46 @@ function renderPreChecks(){
     const now = new Date();
     dl.textContent = now.toLocaleDateString('es-AR',{weekday:'long',day:'2-digit',month:'long'}) + ' — ' + (curSup||'');
   }
-  // build indicator rows
-  const tbody = document.getElementById('pc-mat-tbody');
-  if(tbody){
-    tbody.innerHTML = PC_INDICATORS.map(ind=>`
-      <tr style="border-bottom:1px solid var(--border)">
-        <td style="padding:7px 10px;font-weight:600;color:var(--text1)">${ind.label}</td>
-        <td style="padding:4px 6px">
-          <input type="number" id="pc-${ind.id}-op" min="0" placeholder="0"
-            style="width:70px;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg1);color:var(--text1);font-size:13px;font-weight:700;text-align:center"
-            oninput="pcCheckSave()">
-        </td>
-        <td style="padding:4px 6px">
-          <input type="number" id="pc-${ind.id}-comp" min="0" placeholder="0"
-            style="width:70px;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg1);color:var(--text1);font-size:13px;font-weight:700;text-align:center"
-            oninput="pcCheckSave()">
-        </td>
-      </tr>`).join('');
+  // build indicator cards: Planificado Total + cada indicador
+  const wrap = document.getElementById('pc-indicators-wrap');
+  const inputStyle = 'width:100%;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg1);color:var(--text1);font-size:13px;font-weight:700;text-align:center;box-sizing:border-box';
+  const lblStyle = 'font-size:9px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px;text-align:center';
+  function _pcIndCard(idPfx, label){
+    return `<div style="background:var(--bg3);border-radius:10px;padding:10px 10px 8px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:800;color:var(--text1);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px">${label}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">
+        <div><div style="${lblStyle}">Planificado</div><input type="number" id="pc-${idPfx}-planif" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+        <div><div style="${lblStyle}">Mi Negocio</div><input type="number" id="pc-${idPfx}-mn" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+        <div><div style="${lblStyle}">Oportunidad</div><input type="number" id="pc-${idPfx}-op" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+        <div><div style="${lblStyle}">Compromiso</div><input type="number" id="pc-${idPfx}-comp" min="0" placeholder="0" oninput="pcCheckSave()" style="${inputStyle}"></div>
+      </div>
+    </div>`;
+  }
+  if(wrap){
+    wrap.innerHTML = _pcIndCard('total','Planificado Total Supervisor') +
+      PC_INDICATORS.map(ind=>_pcIndCard(ind.id, ind.label)).join('');
   }
   // restore saved state if any
   const k = _pcKey();
   const saved = (ST.dailyChecks||{})[k]||{};
   if(saved.matinalRealizo !== undefined) pcSetMatinal(saved.matinalRealizo, true);
-  if(saved.matinalRealizo && saved.planificado){
-    const pinp = document.getElementById('pc-planificado');
-    if(pinp) pinp.value = saved.planificado;
-    PC_INDICATORS.forEach(ind=>{
-      const op   = document.getElementById('pc-'+ind.id+'-op');
-      const comp = document.getElementById('pc-'+ind.id+'-comp');
-      if(op   && saved[ind.id+'_op']   !== undefined) op.value   = saved[ind.id+'_op'];
-      if(comp && saved[ind.id+'_comp'] !== undefined) comp.value = saved[ind.id+'_comp'];
+  if(saved.matinalRealizo !== undefined){
+    const allIds = ['total',...PC_INDICATORS.map(i=>i.id)];
+    allIds.forEach(id=>{
+      const fp = document.getElementById('pc-'+id+'-planif');
+      const fm = document.getElementById('pc-'+id+'-mn');
+      const fo = document.getElementById('pc-'+id+'-op');
+      const fc = document.getElementById('pc-'+id+'-comp');
+      if(fp && saved[id+'_planif'] !== undefined) fp.value = saved[id+'_planif'];
+      if(fm && saved[id+'_mn']     !== undefined) fm.value = saved[id+'_mn'];
+      if(fo && saved[id+'_op']     !== undefined) fo.value = saved[id+'_op'];
+      if(fc && saved[id+'_comp']   !== undefined) fc.value = saved[id+'_comp'];
     });
-    const mn = document.getElementById('pc-mn-activos');
-    if(mn && saved.mnActivos !== undefined) mn.value = saved.mnActivos;
   }
   if(saved.matinalSaved) _pcMarkDone('matinal');
   if(saved.focoComercial !== undefined && saved.focoComercial !== null){
     pcSetFoco(saved.focoComercial, true);
+    _pcMarkDone('foco');
   }
   if(saved.agenda){
     const ta = document.getElementById('pc-agenda-text');
@@ -1394,24 +1370,22 @@ function pcSetMatinal(val, silent){
 }
 
 function pcCheckSave(){
-  const planif = document.getElementById('pc-planificado');
-  const btn    = document.getElementById('pc-mat-save-btn');
-  if(!planif||!btn) return;
-  const hasVal = planif.value !== '' && Number(planif.value) >= 0;
-  btn.style.opacity = hasVal ? '1' : '.45';
-  btn.style.pointerEvents = hasVal ? '' : 'none';
+  // Always enable save button once user selected SÍ/NO for matinal
+  const btn = document.getElementById('pc-mat-save-btn');
+  if(btn){ btn.style.opacity='1'; btn.style.pointerEvents=''; }
 }
 
 function pcSaveMatinal(){
   const k = _pcKey();
   if(!ST.dailyChecks[k]) ST.dailyChecks[k]={};
   const d = ST.dailyChecks[k];
-  d.planificado = Number(document.getElementById('pc-planificado')?.value||0);
-  PC_INDICATORS.forEach(ind=>{
-    d[ind.id+'_op']   = Number(document.getElementById('pc-'+ind.id+'-op')?.value||0);
-    d[ind.id+'_comp'] = Number(document.getElementById('pc-'+ind.id+'-comp')?.value||0);
+  const allIds = ['total',...PC_INDICATORS.map(i=>i.id)];
+  allIds.forEach(id=>{
+    d[id+'_planif'] = Number(document.getElementById('pc-'+id+'-planif')?.value||0);
+    d[id+'_mn']     = Number(document.getElementById('pc-'+id+'-mn')?.value||0);
+    d[id+'_op']     = Number(document.getElementById('pc-'+id+'-op')?.value||0);
+    d[id+'_comp']   = Number(document.getElementById('pc-'+id+'-comp')?.value||0);
   });
-  d.mnActivos = Number(document.getElementById('pc-mn-activos')?.value||0);
   d.matinalSaved = true;
   persistState();
   _pcMarkDone('matinal');
@@ -1485,6 +1459,8 @@ function _pcUpdateProgress(){
       btn.style.color = '#fff';
       btn.style.opacity = '1';
       btn.style.pointerEvents = '';
+      // Auto-avanzar al relevamiento después de 800ms
+      setTimeout(function(){ goToRelevamiento(); }, 800);
     } else {
       btn.textContent = '🔒 Completá los '+3+' pasos para continuar ('+done+' de 3 listos)';
       btn.style.background = 'var(--bg3)';
