@@ -2741,7 +2741,15 @@ async function loadFromFirebase(){
         ST.visits.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
       }
       if(Object.keys(fbChecked).length >= Object.keys(ST.checked||{}).length) ST.checked = fbChecked;
-      if(d.dailyChecks) { ST.dailyChecks = Object.assign({}, ST.dailyChecks||{}, d.dailyChecks); }
+      if(d.dailyChecks) {
+        ST.dailyChecks = Object.assign({}, ST.dailyChecks||{}, d.dailyChecks);
+        // If precheck view is visible, refresh counter or navigate now that Firebase data is in
+        const pcView = document.getElementById('precheck-view');
+        if(pcView && pcView.style.display !== 'none'){
+          if(hasDailyChecks()){ goToRelevamiento(); }
+          else { renderPreChecks(); }
+        }
+      }
       const localPot = (ST.potenciales||[]).filter(p=>p.op===curOp&&p.sup===curSup);
       if(fbPot.length >= localPot.length){
         ST.potenciales = (ST.potenciales||[]).filter(p=>!(p.op===curOp&&p.sup===curSup));
