@@ -2546,6 +2546,7 @@ function persistState(){
         if(!ST.visits) ST.visits=[];
         if(!ST.potenciales) ST.potenciales=[];
         if(!ST.checked) ST.checked={};
+        if(!ST.dailyChecks) ST.dailyChecks={};
       }
     }
   }catch(e){ console.warn('State restore error:',e); }
