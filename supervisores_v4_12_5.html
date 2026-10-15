@@ -1312,7 +1312,7 @@ async function uploadPhotoBlob(itemId, type, blob){
   if(_fbStorage){
     try{
       const visitId = curPdv?.id || 'unknown';
-      const path = \`fotos/\${visitId}/\${itemId}/\${type}_\${Date.now()}.jpg\`;
+      const path = `fotos/${visitId}/${itemId}/${type}_${Date.now()}.jpg`;
       const ref = _fbStorage.ref(path);
       await ref.put(blob);
       const url = await ref.getDownloadURL();
@@ -1349,7 +1349,7 @@ function showPhotoThumb(itemId, type, url){
   const div = document.createElement('div');
   div.className = 'photo-thumb-item';
   div.dataset.type = type;
-  div.innerHTML = \`<img src="\${url}" alt="\${label}"><div class="thumb-label">\${label}</div><button class="thumb-del" onclick="removePhoto('\${itemId}','\${type}',this.parentElement)" title="Eliminar">×</button>\`;
+  div.innerHTML = `<img src="${url}" alt="${label}"><div class="thumb-label">${label}</div><button class="thumb-del" onclick="removePhoto('${itemId}','${type}',this.parentElement)" title="Eliminar">×</button>`;
   container.appendChild(div);
 }
 
