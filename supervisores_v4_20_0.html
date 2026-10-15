@@ -833,9 +833,12 @@ textarea.form-input{min-height:80px;resize:vertical}
     <!-- FOTOS TAB -->
     <div class="tab-pane" id="tab-fotos">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-        <div>
-          <div style="font-size:24px;font-weight:800;letter-spacing:-.02em">Galería de Fotos</div>
-          <div style="font-size:13px;color:var(--text3);margin-top:4px">Fotos subidas en relevamientos</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="showTab('dashboard')" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:var(--accent2);padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">← Volver</button>
+          <div>
+            <div style="font-size:24px;font-weight:800;letter-spacing:-.02em">Galería de Fotos</div>
+            <div style="font-size:13px;color:var(--text3);margin-top:4px">Fotos subidas en relevamientos</div>
+          </div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <select id="foto-filter-op" class="form-select" style="width:auto;padding:6px 12px;font-size:12px" onchange="renderPhotoGallery()">
@@ -1046,7 +1049,11 @@ function enterApp(){
   if(_dashRefreshInterval) clearInterval(_dashRefreshInterval);
   _dashRefreshInterval = setInterval(function(){
     const dashTab = document.getElementById('tab-dashboard');
-    if(dashTab && dashTab.style.display !== 'none') renderDashboard();
+    if(dashTab && dashTab.classList.contains('active')){
+      const sy = window.scrollY;
+      renderDashboard();
+      requestAnimationFrame(function(){ window.scrollTo(0,sy); });
+    }
   }, 15000);
   const keys=Object.keys(CLIENTS_DB);
   const total=keys.reduce((s,k)=>s+Object.values(CLIENTS_DB[k]).reduce((ss,arr)=>ss+arr.length,0),0);
@@ -1990,27 +1997,44 @@ function handleVencidoPhoto(id,input){
   reader.onload=function(e){
     const img=new Image();
     img.onload=function(){
-      const maxPx=800;
+      const maxPx=600;
       const ratio=Math.min(maxPx/img.width,maxPx/img.height,1);
       const canvas=document.createElement('canvas');
       canvas.width=Math.round(img.width*ratio);
       canvas.height=Math.round(img.height*ratio);
       canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
       canvas.toBlob(function(blob){
-        const reader2=new FileReader();
-        reader2.onload=function(e2){
-          const dataUrl=e2.target.result;
-          const it=vencidoItems.find(function(x){return x.id===id;});
-          if(it) it.foto=dataUrl;
-          renderVencidoList();
-          toast('📷 Foto vencido adjuntada');
-        };
-        reader2.readAsDataURL(blob);
-      },'image/jpeg',0.60);
+        if(_fbStorage){
+          try{
+            const path='vencidos/'+(curPdv&&curPdv.id||'unk')+'/'+id+'_'+Date.now()+'.jpg';
+            const ref=_fbStorage.ref(path);
+            const pbtn=document.getElementById('venc-pbtn-'+id);
+            if(pbtn) pbtn.textContent='⏳ Subiendo...';
+            ref.put(blob).then(function(){ return ref.getDownloadURL(); }).then(function(url){
+              const it=vencidoItems.find(function(x){return x.id===id;});
+              if(it) it.foto=url;
+              renderVencidoList();
+              toast('📷 Foto vencido subida ✓');
+            }).catch(function(err){ console.warn('[VencFoto]',err); _vencFotoBase64(id,blob); });
+            return;
+          }catch(err){ console.warn('[VencFoto]',err); }
+        }
+        _vencFotoBase64(id,blob);
+      },'image/jpeg',0.50);
     };
     img.src=e.target.result;
   };
   reader.readAsDataURL(file);
+}
+function _vencFotoBase64(id,blob){
+  const r=new FileReader();
+  r.onload=function(e2){
+    const it=vencidoItems.find(function(x){return x.id===id;});
+    if(it) it.foto=e2.target.result;
+    renderVencidoList();
+    toast('📷 Foto vencido adjuntada');
+  };
+  r.readAsDataURL(blob);
 }
 function removeVencidoPhoto(id){
   const it=vencidoItems.find(function(x){return x.id===id;});
