@@ -823,8 +823,12 @@ textarea.form-input{min-height:80px;resize:vertical}
         </div>
       </div>
       <div class="dash-filter" id="dash-filter"></div>
-      <div class="section-title" style="margin:0 0 8px">Planificación del Día</div>
-      <div id="dash-planif-cards" style="margin-bottom:16px"></div>
+      <div style="margin:0 0 8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div class="section-title" style="margin:0">Planificación</div>
+        <div id="dash-planif-nav"></div>
+      </div>
+      <div id="dash-planif-cards" style="margin-bottom:8px"></div>
+      <div id="dash-planif-historial" style="margin-bottom:16px"></div>
       <div id="dash-sup-cards"></div>
       <div class="section-title" style="margin-top:8px">Últimas Visitas</div>
       <div class="card" id="dash-visits-list"></div>
@@ -2265,6 +2269,20 @@ async function exportPotenciales(){
 }
 
 // DASHBOARD
+function _dashNavDate(delta){
+  if(delta===0){_dashPlanifDate='';renderDashboard();return;}
+  var base=_dashPlanifDate||dateStr();
+  var d=new Date(base+'T12:00:00');
+  d.setDate(d.getDate()+delta);
+  var nd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var td=dateStr();
+  _dashPlanifDate=(nd>td)?'':nd;
+  renderDashboard();
+}
+function _dashGoDate(ds){
+  _dashPlanifDate=(ds===dateStr())?'':ds;
+  renderDashboard();
+}
 function renderDashboard(){
   // Role-based filter: supervisors only see themselves
   const visibleOps = curRole==='admin' ? Object.keys(OPS) : [curOp];
@@ -2344,13 +2362,29 @@ function renderDashboard(){
   });
   document.getElementById('dash-sup-cards').innerHTML=html||'<div style="color:var(--text3);padding:20px">Sin datos</div>';
 
-  // ── Planificación del Día ──
+  // ── Planificación ──
+  const today=dateStr();
+  const selDate=_dashPlanifDate||today;
+  const isToday=selDate===today;
+  var _sd=new Date(selDate+'T12:00:00');
+  var _dn=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var _mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var dateLbl=(isToday?'Hoy · ':'')+_dn[_sd.getDay()]+' '+_sd.getDate()+' '+_mn[_sd.getMonth()];
+  var navEl=document.getElementById('dash-planif-nav');
+  if(navEl){
+    var _nav='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">';
+    _nav+='<button onclick="_dashNavDate(-1)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:8px;font-size:13px;cursor:pointer">◄</button>';
+    _nav+='<span style="font-size:13px;font-weight:700;color:var(--text1);min-width:130px;text-align:center">'+dateLbl+'</span>';
+    _nav+=isToday?'<button disabled style="opacity:.35;background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:8px;font-size:13px">►</button>':'<button onclick="_dashNavDate(1)" style="background:var(--bg2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:8px;font-size:13px;cursor:pointer">►</button>';
+    if(!isToday)_nav+='<button onclick="_dashNavDate(0)" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);color:var(--accent2);padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Hoy</button>';
+    _nav+='</div>';
+    navEl.innerHTML=_nav;
+  }
   let planifHtml = '';
-  const today = dateStr();
   visibleOps.forEach(op=>{
     if(curDashFilter!=='all'&&curDashFilter!==op) return;
     visibleSups(op).forEach(sup=>{
-      const k = today+'__'+op+'__'+sup;
+      const k = selDate+'__'+op+'__'+sup;
       const dc = (ST.dailyChecks||{})[k];
       const opColor = {'op-pb':'var(--pb)','op-hn':'var(--hn)','op-cb':'var(--cb)'}[OPS[op]?.cls]||'var(--accent)';
       const initials = sup.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
@@ -2365,11 +2399,38 @@ function renderDashboard(){
       }).join('');
       const status = dc?.matinalSaved && dc?.focoComercial !== undefined && dc?.agendaSaved
         ? '<span style="background:#16a34a22;color:var(--green);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">✔ Completo</span>'
-        : '<span style="background:#f59e0b22;color:var(--yellow);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">⏳ Incompleto</span>';
+        : dc ? '<span style="background:#f59e0b22;color:var(--yellow);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">⏳ Incompleto</span>'
+        : '<span style="background:var(--bg3);color:var(--text3);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">Sin datos</span>';
       planifHtml += '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><div style="width:36px;height:36px;border-radius:50%;background:'+opColor+'22;color:'+opColor+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800">'+initials+'</div><div style="flex:1"><div style="font-size:14px;font-weight:700">'+sup+'</div><div style="font-size:11px;color:var(--text3)">'+op+'</div></div>'+status+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:10px"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:4px">Matinal</div>'+matIcon+'</div><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:4px">Foco Comercial</div>'+focoIcon+'</div></div><div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:4px">Agenda</div>'+agendaTxt+'</div><div style="margin-bottom:8px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:6px">Planificado Total</div>'+planifRow('Planificado',dc?.total_planif)+planifRow('Clientes Activos',dc?.total_activos)+planifRow('Oportunidad',dc?.total_op)+planifRow('Compromiso',dc?.total_comp)+'</div>'+(indRows?'<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:6px">Por Indicador</div>'+indRows+'</div>':'')+'</div>';
     });
   });
-  document.getElementById('dash-planif-cards').innerHTML = planifHtml || '<div style="color:var(--text3);padding:20px;font-size:13px">Sin planificaciones registradas hoy.</div>';
+  document.getElementById('dash-planif-cards').innerHTML = planifHtml || '<div style="color:var(--text3);padding:20px;font-size:13px">Sin planif. para '+dateLbl+'.</div>';
+  (function(){
+    var dc2=ST.dailyChecks||{};
+    var days=[];
+    for(var i=0;i<7;i++){var d2=new Date(today+'T12:00:00');d2.setDate(d2.getDate()-i);days.push(d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'-'+String(d2.getDate()).padStart(2,'0'));}
+    var pairs=[];
+    visibleOps.forEach(function(op){if(curDashFilter!=='all'&&curDashFilter!==op)return;visibleSups(op).forEach(function(sup){pairs.push({op:op,sup:sup});});});
+    if(!pairs.length){document.getElementById('dash-planif-historial').innerHTML='';return;}
+    var dn2=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    var hdrs=days.map(function(ds){var d3=new Date(ds+'T12:00:00');var isSel2=ds===selDate;return '<th style="text-align:center;padding:3px 6px;font-size:10px;font-weight:700;'+(isSel2?'color:var(--accent2)':'color:var(--text3)')+';cursor:pointer" onclick="_dashGoDate(\''+ds+'\')">'  +dn2[d3.getDay()]+'<br><span style="font-size:11px">'+d3.getDate()+'</span></th>';}).join('');
+    var trows=pairs.map(function(p){
+      var cells=days.map(function(ds){
+        var k2=ds+'__'+p.op+'__'+p.sup;
+        var d4=dc2[k2];
+        var isSel2=ds===selDate;
+        var bg2=isSel2?'background:rgba(99,102,241,.15);outline:2px solid rgba(99,102,241,.5);':'';
+        if(!d4)return '<td style="text-align:center;padding:4px 6px;font-size:12px;color:var(--text3);border-radius:5px;'+bg2+'" onclick="_dashGoDate(\''+ds+'\')">—</td>';
+        var comp=d4.matinalSaved&&d4.focoComercial!==undefined&&d4.agendaSaved;
+        var pl=d4.total_planif!=null?'<div style="font-size:9px;color:var(--text3)">'+d4.total_planif+'</div>':'';
+        return '<td style="text-align:center;padding:4px 6px;cursor:pointer;border-radius:5px;'+bg2+'" onclick="_dashGoDate(\''+ds+'\')" ><span style="font-weight:700;color:'+(comp?'var(--green)':'var(--yellow)')+'">'+(comp?'✔':'⏳')+'</span>'+pl+'</td>';
+      }).join('');
+      var init=p.sup.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+      var oc={'op-pb':'var(--pb)','op-hn':'var(--hn)','op-cb':'var(--cb)'}[(OPS[p.op]&&OPS[p.op].cls)]||'var(--accent)';
+      return '<tr><td style="padding:4px 8px;white-space:nowrap;font-size:11px;font-weight:700"><span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:'+oc+'22;color:'+oc+';text-align:center;line-height:22px;font-size:10px;margin-right:4px">'+init+'</span>'+p.sup.split(' ')[0]+'</td>'+cells+'</tr>';
+    }).join('');
+    document.getElementById('dash-planif-historial').innerHTML='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;overflow-x:auto"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:8px">📅 Historial Semanal</div><table style="width:100%;border-collapse:separate;border-spacing:2px"><thead><tr><th style="text-align:left;padding:3px 8px;font-size:10px;color:var(--text3)">Supervisor</th>'+hdrs+'</tr></thead><tbody>'+trows+'</tbody></table><div style="font-size:10px;color:var(--text3);margin-top:6px">✔ Completo ⏳ Incompleto — Sin datos · Toca para ver ese día</div></div>';
+  })();
   const listEl=document.getElementById('dash-visits-list');
   const recents=ST.visits.slice(0,25);
   if(!recents.length){listEl.innerHTML='<div style="color:var(--text3);font-style:italic">Sin visitas registradas</div>';return;}
@@ -2657,6 +2718,7 @@ let _fbPollInterval = null; // polling fallback para admin
 let _lastSyncTime = null; // timestamp última sync exitosa
 let _fbReconnectTimer = null; // timer auto-reconexión
 let _dashRefreshInterval = null; // refresh dashboard precheck en tiempo real
+let _dashPlanifDate = '';
 
 function _fbDocId(op,sup){
   return (op+'_'+sup).toLowerCase().replace(/[^a-z0-9_]/g,'_').slice(0,64);
